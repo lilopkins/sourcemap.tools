@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { strToU8, zipSync } from 'fflate'
 import { type ChangeEvent, StrictMode } from 'react'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -85,6 +86,26 @@ describe('source maps', () => {
     const sourceMapFileInput = screen.getByLabelText(/choose files/i)
     const files = regular.sourcemaps.map(sm => new File([sm.content], sm.fileName))
     await user.upload(sourceMapFileInput, files)
+
+    await waitFor(() => expect(resultTextArea).toHaveValue(regular.result))
+  })
+
+  test('allows uploading a zip with source maps in folders', async () => {
+    render(<App />)
+    const user = userEvent.setup()
+
+    const resultTextArea = screen.getByRole('textbox', { name: /original stack trace/i })
+    await user.type(
+      screen.getByRole('textbox', { name: /minified stack trace/i }),
+      regular.stacktrace,
+    )
+
+    const data: Record<string, Uint8Array> = {}
+    regular.sourcemaps.forEach((sm, i) => {
+      data[`dist/dir${i}/${sm.fileName}`] = strToU8(sm.content)
+    })
+    const zip = new File([new Uint8Array(zipSync(data))], 'maps.zip')
+    await user.upload(screen.getByLabelText(/choose files/i), zip)
 
     await waitFor(() => expect(resultTextArea).toHaveValue(regular.result))
   })
@@ -334,7 +355,7 @@ describe('source maps', () => {
     render(<App />)
 
     const sourceMapFileInput = screen.getByLabelText(/choose files/i)
-    expect(sourceMapFileInput).toHaveAttribute('accept', '.map,.txt,.json')
+    expect(sourceMapFileInput).toHaveAttribute('accept', '.map,.txt,.json,.zip')
   })
 
   test('does not render the pasted text into the textarea while it is parsing', async () => {
