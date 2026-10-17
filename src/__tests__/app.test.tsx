@@ -110,6 +110,15 @@ describe('source maps', () => {
     await waitFor(() => expect(resultTextArea).toHaveValue(regular.result))
   })
 
+  test('shows a warning when an uploaded zip is invalid', async () => {
+    render(<App />)
+    const user = userEvent.setup()
+
+    await user.upload(screen.getByLabelText(/choose files/i), new File(['not a zip'], 'broken.zip'))
+
+    expect(await screen.findByText(/some of the files were not source maps/i)).toBeInTheDocument()
+  })
+
   test('allows providing source map contents through text input', async () => {
     render(<App />)
     const user = userEvent.setup()

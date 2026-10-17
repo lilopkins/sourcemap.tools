@@ -33,6 +33,14 @@ describe('zip', () => {
     await expect(extractSourceMapFiles(new File(['not a zip'], 'x.zip'))).rejects.toBeDefined()
   })
 
+  test('rejects archives with too many files', async () => {
+    const files = Object.fromEntries(
+      Array.from({ length: 5001 }, (_, index) => [`maps/${index}.map`, '']),
+    )
+
+    await expect(extractSourceMapFiles(makeZip(files))).rejects.toThrow('Archive too large')
+  })
+
   test('detects zip files', () => {
     expect(isZipFile(new File([], 'a.ZIP'))).toBe(true)
     expect(isZipFile(new File([], 'a.map'))).toBe(false)
